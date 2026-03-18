@@ -1,0 +1,71 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Build Module
+run-name: ${{ github.workflow }} ${{ github.event.repository.updated_at}}
+
+on:
+  workflow_call:
+    outputs:
+      artifact_name:
+        description: "The name of the generated artifact"
+        value: ${{ jobs.build-module.outputs.artifact_name }}
+  workflow_dispatch:
+  push:
+    branches: ["**"]
+  schedule:
+    - cron: "00 00 * * 5"
+
+permissions:
+  contents: read
+
+jobs:
+  build-module:
+    name: Build Module
+    runs-on: windows-latest
+    outputs:
+      artifact_name: ${{ steps.get-module-path.outputs.artifact_name }}
+
+    steps:
+      - uses: actions/checkout@v6.0.2
+        name: Checkout ${{ github.ref }}
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v5.2.0
+
+      - name: Setup Just
+        uses: extractions/setup-just@v3
+
+      - name: Build Executable
+        run: just create-module
+
+      - id: get-module-path
+        name: Get Module Path
+        run: |
+          $version_name = "0.0.0"
+          $version_pattern = "ModuleVersion = .*$"
+          $version_substitution = "ModuleVersion = '$version_name'"
+
+          $artifact_path = "Output"
+          $artifact_name = $(Get-Item -Path Measure-Time).BaseName
+          $module_version = (Get-Content $artifact_name\$artifact_name.psd1)
+          $module_version -replace $version_pattern, $version_substitution | Set-Content $artifact_name\$artifact_name.psd1
+
+          Copy-Item -Recurse -Path $artifact_name -Destination $artifact_path\$artifact_name
+          $module_path = $(Get-Item -Path $artifact_path).FullName
+
+          New-Item -ItemType Directory -Path $artifact_path\$artifact_name\$version_name
+          Get-ChildItem -Exclude $version_name -Path $artifact_path\$artifact_name | ForEach-Object {
+            Move-Item -Path $_ -Destination $artifact_path\$artifact_name\$version_name
+          }
+          
+          Write-Output "artifact_name=$artifact_name" >> $env:GITHUB_OUTPUT
+          Write-Output "artifact_path=$artifact_path" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v7.0.0
+        name: Create Artifact ${{ steps.get-module-path.outputs.artifact_name }}
+        with:
+          name: ${{ steps.get-module-path.outputs.artifact_name }}
+          path: ${{ steps.get-module-path.outputs.artifact_path }}
+          if-no-files-found: error
