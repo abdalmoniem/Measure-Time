@@ -4,12 +4,11 @@
    <p>A PowerShell module that exposes Measure-Time command to measure command execution time and cpu usage</p>
 
 [![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](LICENSE.md)
-[![GitHub Views](https://views.whatilearened.today/views/github/abdalmoniem/Measure-Time.svg)](https://github.com/abdalmoniem/Measure-Time)
 
 [![PowerShell Gallery Version](https://img.shields.io/powershellgallery/v/Measure-Time?label=PowerShell%20Gallery%20Version)](https://img.shields.io/powershellgallery/v/Measure-Time?label=PowerShell%20Gallery%20Version)
 [![GitHub Release Version](https://img.shields.io/github/v/release/abdalmoniem/Measure-Time?label=GitHub%20Release%20Version)](https://github.com/abdalmoniem/Measure-Time/releases/latest?label=GitHub%20Release%20Version)
 
-[![PowerShell Gallery Platform Support](https://img.shields.io/powershellgallery/p/Measure-Time)](https://img.shields.io/powershellgallery/p/Measure-Time)
+[![GitHub Views](https://views.whatilearened.today/views/github/abdalmoniem/Measure-Time.svg)](https://github.com/abdalmoniem/Measure-Time)
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/abdalmoniem/Measure-Time/total?label=GitHub%20Downloads)](https://github.com/abdalmoniem/Measure-Time/releases/latest?label=GitHub%20Downloads)
 [![PowerShell Gallery Downloads)](https://img.shields.io/powershellgallery/dt/Measure-Time?label=PowerShell%20Gallery%20downloads)](https://img.shields.io/powershellgallery/dt/Measure-Time?label=PowerShell%20Gallery%20downloads)
 
