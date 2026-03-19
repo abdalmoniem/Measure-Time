@@ -58,33 +58,35 @@ build-all: build build-release
 
 [doc('Create Measure-Time PowerShell Module')]
 [group('build')]
-[windows]
 [script]
+[windows]
 create-module: build-release
     $MEASURE_TIME_MOD_VERSION = $(just --quiet get_version)
     Copy-Item -Path {{ JOB_API_DLL }} -Destination "{{ MEASURE_TIME_MOD_ROOT }}/{{ MEASURE_TIME_MOD_DLL }}"
 
     New-ModuleManifest -Verbose `
-                       -Path "{{ MEASURE_TIME_MOD_PSD1 }}" `
-                       -RootModule "{{ MEASURE_TIME_MOD_PSM1 }}" `
-                       -NestedModules "{{ MEASURE_TIME_MOD_DLL }}" `
-                       -ModuleVersion $MEASURE_TIME_MOD_VERSION `
                        -Author "AbdElMoniem ElHifnawy" `
+                       -Path "{{ MEASURE_TIME_MOD_PSD1 }}" `
+                       -ModuleVersion $MEASURE_TIME_MOD_VERSION `
+                       -RootModule "{{ MEASURE_TIME_MOD_PSM1 }}" `
+                       -PowerShellVersion ([version]::new("5.1")) `
+                       -NestedModules "{{ MEASURE_TIME_MOD_DLL }}" `
+                       -ReleaseNotes 'https://github.com/abdalmoniem/Measure-Time/blob/main/CHANGELOG.md' `
                        -LicenseUri "https://raw.githubusercontent.com/abdalmoniem/Measure-Time/refs/heads/main/LICENSE.md" `
+                       -IconUri "https://raw.githubusercontent.com/abdalmoniem/Measure-Time/refs/heads/main/assets/icon.png" `
                        -Description "A PowerShell module that exposes Measure-Time command to measure command execution time and cpu usage"
 
-[arg('whatif', help='test if publish will succeed')]
+[doc('Verify Measure-Time before publishing to PSGallery')]
+[group('build')]
+[windows]
+verify-module: create-module
+    @Publish-Module -Verbose -WhatIf -Path {{ MEASURE_TIME_MOD_ROOT }} -NuGetApiKey "$(Get-Content -Tail 1 nuget_api_key.txt)"
+
 [doc('Publish Measure-Time to PSGallery')]
 [group('build')]
-[script]
 [windows]
-publish-module whatif: create-module
-    if ({{ whatif }}) {
-        Publish-Module -Verbose -WhatIf -Path {{ MEASURE_TIME_MOD_ROOT }} -NuGetApiKey "$(cat -tail 1 nuget_api_key.txt)"
-    }
-    else {
-        Publish-Module -Verbose -Path {{ MEASURE_TIME_MOD_ROOT }} -NuGetApiKey "$(cat -tail 1 nuget_api_key.txt)"
-    }
+publish-module: create-module
+    @Publish-Module -Verbose -Path {{ MEASURE_TIME_MOD_ROOT }} -NuGetApiKey "$(Get-Content -Tail 1 nuget_api_key.txt)"
 
 [arg('tag', help='the tag to show changelog for')]
 [doc('shows changelog for tag')]
@@ -96,7 +98,7 @@ tag_changelog tag:
 [doc('shows changelog for all tagged commits')]
 [group('changelog')]
 tags_changelog:
-    @git-cliff --verbose --offline --body="$(Get-Content -Raw cliff_body.tera)" --tag "$(git describe --tags --abbrev=0)"
+    @git-cliff --verbose --offline --body="$(Get-Content -Raw cliff_body.tera)"
 
 [doc('shows changelog for untagged commits')]
 [group('changelog')]
@@ -111,9 +113,9 @@ all_changelog:
 [doc('updates CHANGELOG.md with changelog from all tagged commits')]
 [group('changelog')]
 update_changelog:
-    @git-cliff --verbose --offline --body="$(Get-Content -Raw cliff_body.tera)" --tag "$(git describe --tags --abbrev=0)"
-    @git-cliff --verbose --offline \
-               --body="$(Get-Content -Raw cliff_body.tera)" --tag "$(git describe --tags --abbrev=0)" > CHANGELOG.md
+    @ $OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    @git-cliff --verbose --offline --body="$(Get-Content -Raw cliff_body.tera)" | Tee-Object CHANGELOG.md
+
     @Write-Host
     @Write-Host "changelog written to '$(Resolve-Path CHANGELOG.md)'!"
 
