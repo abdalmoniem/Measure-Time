@@ -7,8 +7,7 @@ JOB_API_DLL := JOB_API_PROJECT_ROOT + "/bin/Release/netstandard2.0/JobApiLib.dll
 MEASURE_TIME_MOD_ROOT := "Measure-Time"
 MEASURE_TIME_MOD_PSD1 := MEASURE_TIME_MOD_ROOT + "/Measure-Time.psd1"
 MEASURE_TIME_MOD_PSM1 := MEASURE_TIME_MOD_ROOT + ".psm1"
-MEASURE_TIME_MOD_DLL :=  JOB_API_PROJECT_ROOT + ".dll"
-MEASURE_TIME_MOD_VERSION := "1.0.3"
+MEASURE_TIME_MOD_DLL := JOB_API_PROJECT_ROOT + ".dll"
 
 alias f := fmt
 alias b := build
@@ -60,17 +59,19 @@ build-all: build build-release
 [doc('Create Measure-Time PowerShell Module')]
 [group('build')]
 [windows]
+[script]
 create-module: build-release
-    @cp {{ JOB_API_DLL }} "{{ MEASURE_TIME_MOD_ROOT }}/{{ MEASURE_TIME_MOD_DLL }}"
+    $MEASURE_TIME_MOD_VERSION = $(just --quiet get_version)
+    Copy-Item -Path {{ JOB_API_DLL }} -Destination "{{ MEASURE_TIME_MOD_ROOT }}/{{ MEASURE_TIME_MOD_DLL }}"
 
-    @New-ModuleManifest -Verbose \
-                        -Path "{{ MEASURE_TIME_MOD_PSD1 }}" \
-                        -RootModule "{{ MEASURE_TIME_MOD_PSM1 }}" \
-                        -NestedModules "{{ MEASURE_TIME_MOD_DLL }}" \
-                        -ModuleVersion {{ MEASURE_TIME_MOD_VERSION }} \
-                        -Author "AbdElMoniem ElHifnawy" \
-                        -LicenseUri "https://raw.githubusercontent.com/abdalmoniem/Measure-Time/refs/heads/main/LICENSE.md" \
-                        -Description "A PowerShell module that exposes Measure-Time command to measure command execution time and cpu usage"
+    New-ModuleManifest -Verbose `
+                       -Path "{{ MEASURE_TIME_MOD_PSD1 }}" `
+                       -RootModule "{{ MEASURE_TIME_MOD_PSM1 }}" `
+                       -NestedModules "{{ MEASURE_TIME_MOD_DLL }}" `
+                       -ModuleVersion $MEASURE_TIME_MOD_VERSION `
+                       -Author "AbdElMoniem ElHifnawy" `
+                       -LicenseUri "https://raw.githubusercontent.com/abdalmoniem/Measure-Time/refs/heads/main/LICENSE.md" `
+                       -Description "A PowerShell module that exposes Measure-Time command to measure command execution time and cpu usage"
 
 [arg('whatif', help='test if publish will succeed')]
 [doc('Publish Measure-Time to PSGallery')]
@@ -89,28 +90,38 @@ publish-module whatif: create-module
 [doc('shows changelog for tag')]
 [group('changelog')]
 tag_changelog tag:
-    @git-cliff --verbose --offline --body="$(cat -raw cliff_body.tera)" \
+    @git-cliff --verbose --offline --body="$(Get-Content -Raw cliff_body.tera)" \
                "$(git describe --tags --abbrev=0 {{ tag }}^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..{{ tag }}"
 
 [doc('shows changelog for all tagged commits')]
 [group('changelog')]
 tags_changelog:
-    @git-cliff --verbose --offline --body="$(cat -raw cliff_body.tera)" --tag "$(git describe --tags --abbrev=0)"
+    @git-cliff --verbose --offline --body="$(Get-Content -Raw cliff_body.tera)" --tag "$(git describe --tags --abbrev=0)"
 
 [doc('shows changelog for untagged commits')]
 [group('changelog')]
 unreleased_changelog:
-    @git-cliff --verbose --offline --body="$(cat -raw cliff_body.tera)" "$(git describe --tags --abbrev=0)..HEAD"
+    @git-cliff --verbose --offline --body="$(Get-Content -Raw cliff_body.tera)" "$(git describe --tags --abbrev=0)..HEAD"
 
 [doc('shows changelog for all commits')]
 [group('changelog')]
 all_changelog:
-    @git-cliff --verbose --offline --body="$(cat -raw cliff_body.tera)"
+    @git-cliff --verbose --offline --body="$(Get-Content -Raw cliff_body.tera)"
 
 [doc('updates CHANGELOG.md with changelog from all tagged commits')]
 [group('changelog')]
 update_changelog:
-    @git-cliff --verbose --offline --body="$(cat -raw cliff_body.tera)" --tag "$(git describe --tags --abbrev=0)"
-    @git-cliff --verbose --offline --body="$(cat -raw cliff_body.tera)" --tag "$(git describe --tags --abbrev=0)" > CHANGELOG.md
-    @echo ""
-    @echo "changelog written to '$(Resolve-Path CHANGELOG.md)'!"
+    @git-cliff --verbose --offline --body="$(Get-Content -Raw cliff_body.tera)" --tag "$(git describe --tags --abbrev=0)"
+    @git-cliff --verbose --offline \
+               --body="$(Get-Content -Raw cliff_body.tera)" --tag "$(git describe --tags --abbrev=0)" > CHANGELOG.md
+    @Write-Host
+    @Write-Host "changelog written to '$(Resolve-Path CHANGELOG.md)'!"
+
+[private]
+[script]
+get_version:
+    $csproj_content = $(Get-Content .\JobApiLib\JobApiLib.csproj)
+    $version = ($csproj_content | Select-String "\bVersion\b")[0].Line.Trim()
+    $version = $version -replace "[</>Version]", ""
+
+    Write-Output $version
